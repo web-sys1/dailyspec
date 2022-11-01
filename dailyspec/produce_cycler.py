@@ -88,7 +88,7 @@ def produce_cycler_per_channel(year, jday_start, jday_end, seed_id, fnam_out):
 
 def main():
     args = define_arguments()
-    produce_cycler(args.year, args.jday_start, args.jday_end, args.seed_id,
+    produce_cycler_per_channel(args.year, args.jday_start, args.jday_end, args.seed_id,
                    fnam_out=f'overview_{args.seed_id}.html')
 
 

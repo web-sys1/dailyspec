@@ -24,7 +24,21 @@ def define_arguments():
 
     helptext = 'Maximum frequency for plot'
     parser.add_argument('--fmax', default=50., type=float, help=helptext)
-
+    
+    parser.add_argument('--web_service', default=False, 
+                       action='store_true',
+                       help='Web Services / Data Centers')
+    parser.add_argument('--client', default='IRIS',
+                        help='Specifiy client / Data Center, e.g. IRIS')
+    parser.add_argument('--network', default='IU',
+                        help='Seismic network')  
+    parser.add_argument('--station', default='ANMO',
+                        help='Seismic station. Station description, coordinates.')
+    parser.add_argument('--location', default='00',
+                        help='Location of which station')  
+    parser.add_argument('--channel', default='BHZ',
+                        help='Channel codename')
+                        
     parser.add_argument('--dBmin', type=float, default=-180,
                         help='Minimum value for spectrograms (in dB)')
     parser.add_argument('--dBmax', type=float, default=-100,
@@ -74,7 +88,18 @@ def main():
     import obspy
 
     st = obspy.Stream()
-    for file in args.data_files:
+    if args.web_service == True:
+      print('You chose to load through web service. Please be patient.')
+      ws_client = Client(args.client)
+      st += ws_client.get_waveforms(args.network,
+                                    args.station,
+                                    args.location,
+                                    args.channel,
+                                    obspy.UTCDateTime(args.tstart),
+                                    obspy.UTCDateTime(args.tend),
+                                    )
+    else:  
+     for file in args.data_files:
         st += obspy.read(file)
     st.merge(method=1, fill_value='interpolate')
     samp_rate_original = st[0].stats.sampling_rate
