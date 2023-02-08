@@ -603,6 +603,7 @@ if __name__ == '__main__':
                        vmin=args.dBmin,
                        vmax=args.dBmax,
                        fmax=args.fmax,
+                       colormap='inferno',
                        noise=noise,
                        fnam=fnam_out,
                        kind=args.kind)

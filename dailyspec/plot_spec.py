@@ -62,10 +62,8 @@ def define_arguments():
                         help='Tradeoff between time and frequency resolution in CWT. Recommended between 1 and 10.' + 
                         'Lower numbers: better time resolution\n' + 
                         'Higher numbers: better freq resolution')
-    parser.add_argument('--cmap', default=10, type=str,
-                        help='Tradeoff between time and frequency resolution in CWT. Recommended between 1 and 10.' + 
-                        'Lower numbers: better time resolution\n' + 
-                        'Higher numbers: better freq resolution')                                        
+    parser.add_argument('--cmap', default='inferno', type=str,
+                        help='Colormap')                                        
     parser.add_argument('--figsize', nargs=2, default=(16, 9), type=float,
                         help='Size of the produced figure in Inches. Default is 16x9, which is good for high' +
                              'resolution screen display.')
@@ -151,11 +149,11 @@ def main():
               endtime=tr.stats.endtime,
               level='response')
               
-             coords = inv.get_coordinates(tr.get_id())
-             tr.stats.latitude = coords['latitude']
-             tr.stats.longitude = coords['longitude']
-             tr.stats.elevation = coords['elevation']
-           st.remove_response(inventory=inv, output='ACC', taper=args.taper)
+            coords = inv.get_coordinates(tr.get_id())
+            tr.stats.latitude = coords['latitude']
+            tr.stats.longitude = coords['longitude']
+            tr.stats.elevation = coords['elevation']
+          st.remove_response(inventory=inv, output='ACC', taper=args.taper)
         else:
           if args.unit=='VEL':
               st.differentiate()
