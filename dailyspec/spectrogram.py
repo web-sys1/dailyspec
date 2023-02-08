@@ -219,6 +219,8 @@ def calc_specgram_dual(st_LF, st_HF,
         File name to save spectrogram into.
     :param noise:
         Plot Earth noise model on the right.
+    :param figsize:
+        Size of output figure in inches
     :param dpi: float
         Resolution of saved image (in dpi. Default results in 3840x2160)
     """
