@@ -170,6 +170,7 @@ def calc_specgram_dual(st_LF, st_HF,
                        overlap=0.5, kind='spec',
                        tstart=None, tend=None,
                        vmin=None, vmax=None, w0=10,
+                       colormap='',
                        log=True,
                        ratio_LF_spec=0.6,
                        catalog=None,
@@ -204,6 +205,8 @@ def calc_specgram_dual(st_LF, st_HF,
         Upper limit of colorbar
     :param w0: integer
         Tradeoff parameter for time vs frequency resolution in cwt (higher: better f resolution)
+    :param colormap: string
+        Colormap options can be: 'inferno' or 'viridis'
     :param log: bool
         Plot spectrogram logarithmic (default) or linear
     :param ratio_LF_spec: float
@@ -280,7 +283,7 @@ def calc_specgram_dual(st_LF, st_HF,
                 [(fmin_LF, fmax_LF),
                  (fmin_HF, fmax_HF)],
                 [winlen_LF, winlen_HF],
-                ['inferno', 'inferno'],
+                [colormap, colormap],
                 [(vmin, vmax), (vmin, vmax)]):
 
         for tr in st:

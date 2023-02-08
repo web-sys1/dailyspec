@@ -32,7 +32,7 @@ def define_arguments():
     parser.add_argument('--ws_inventory', default=False, 
                        action='store_true',
                        help='Fetch FDSN / StationXML inventory and parse via the web service without having to read locally.')
-    parser.add_argument('--client', default='IRIS',
+    parser.add_argument('--client', default='IRIS', type=str,
                         help='Specifiy client / Data Center, e.g. IRIS')
     parser.add_argument('--network', default='IU',
                         help='Seismic network')  
@@ -40,7 +40,7 @@ def define_arguments():
                         help='Seismic station. Station description, coordinates.')
     parser.add_argument('--location', default='00',
                         help='Location of which station')  
-    parser.add_argument('--channel', default='BHZ',
+    parser.add_argument('--channel', default='BHZ', type=str,
                         help='Channel codename')
                         
     parser.add_argument('--dBmin', type=float, default=-180,
@@ -61,7 +61,11 @@ def define_arguments():
     parser.add_argument('--w0', default=10, type=int,
                         help='Tradeoff between time and frequency resolution in CWT. Recommended between 1 and 10.' + 
                         'Lower numbers: better time resolution\n' + 
-                        'Higher numbers: better freq resolution')                 
+                        'Higher numbers: better freq resolution')
+    parser.add_argument('--cmap', default=10, type=str,
+                        help='Tradeoff between time and frequency resolution in CWT. Recommended between 1 and 10.' + 
+                        'Lower numbers: better time resolution\n' + 
+                        'Higher numbers: better freq resolution')                                        
     parser.add_argument('--figsize', nargs=2, default=(16, 9), type=float,
                         help='Size of the produced figure in Inches. Default is 16x9, which is good for high' +
                              'resolution screen display.')
@@ -94,7 +98,8 @@ def main():
 
     from .spectrogram import calc_specgram_dual
     import obspy
-    from obspy.clients.fdsn import Client
+    from obspy import UTCDateTime
+    from obspy.clients.fdsn import Client, RoutingClient
 
     st = obspy.Stream()
     if args.web_service == True:
@@ -104,8 +109,8 @@ def main():
                                     station=args.station,
                                     location=args.location,
                                     channel=args.channel,
-                                    starttime=obspy.UTCDateTime(args.tstart),
-                                    endtime=obspy.UTCDateTime(args.tend),
+                                    starttime=UTCDateTime(args.tstart),
+                                    endtime=UTCDateTime(args.tend),
                                     )
     else:
      for file in args.data_files:
@@ -135,20 +140,21 @@ def main():
         
     else:
         if args.ws_inventory==True:
-           inv = ws_client.get_stations(
-             network=tr.stats.network,
-             station=tr.stats.station,
-             location=tr.stats.location,
-             channel=tr.stats.channel,
-             starttime=tr.stats.starttime,
-             endtime=tr.stats.endtime,
-             level='response',
-             )
-           for tr in st:
-              coords = inv.get_coordinates(tr.get_id())
-              tr.stats.latitude = coords['latitude']
-              tr.stats.longitude = coords['longitude']
-              tr.stats.elevation = coords['elevation']
+          client = RoutingClient('iris-federator')
+          for tr in st:
+            inv = client.get_stations(
+              network=tr.stats.network,
+              station=tr.stats.station,
+              location=tr.stats.location,
+              channel=tr.stats.channel,
+              starttime=tr.stats.starttime,
+              endtime=tr.stats.endtime,
+              level='response')
+              
+             coords = inv.get_coordinates(tr.get_id())
+             tr.stats.latitude = coords['latitude']
+             tr.stats.longitude = coords['longitude']
+             tr.stats.elevation = coords['elevation']
            st.remove_response(inventory=inv, output='ACC', taper=args.taper)
         else:
           if args.unit=='VEL':
@@ -180,7 +186,7 @@ def main():
                        tstart=args.tstart, tend=args.tend,
                        noise='Earth',
                        overlap=0.8,
-                       w0=args.w0,
+                       w0=args.w0, colormap=args.cmap,
                        ratio_LF_spec=args.plot_ratio,
                        catalog=cat,
                        figsize=args.figsize,
