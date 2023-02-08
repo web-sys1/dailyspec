@@ -63,7 +63,7 @@ def define_arguments():
                         'Lower numbers: better time resolution\n' + 
                         'Higher numbers: better freq resolution')
     parser.add_argument('--cmap', default='inferno', type=str,
-                        help='Colormap')                                        
+                        help='Pick up colormap: can be magma, viridis or inferno.')                                        
     parser.add_argument('--figsize', nargs=2, default=(16, 9), type=float,
                         help='Size of the produced figure in Inches. Default is 16x9, which is good for high' +
                              'resolution screen display.')
