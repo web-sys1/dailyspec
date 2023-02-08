@@ -12,6 +12,7 @@ from argparse import ArgumentParser
 def define_arguments():
     helptext = 'Plot spectogram of data'
     parser = ArgumentParser(description=helptext)
+    tp_parser = parser.add_mutually_exclusive_group(required=True)
 
     helptext = 'Data files'
     parser.add_argument('-d', '--data_files', nargs='+', help=helptext)
@@ -28,6 +29,9 @@ def define_arguments():
     parser.add_argument('--web_service', default=False, 
                        action='store_true',
                        help='Web Services / Data Centers')
+    parser.add_argument('--ws_inventory', default=False, 
+                       action='store_true',
+                       help='Fetch FDSN / StationXML inventory and parse via the web service without having to read locally.')
     parser.add_argument('--client', default='IRIS',
                         help='Specifiy client / Data Center, e.g. IRIS')
     parser.add_argument('--network', default='IU',
@@ -55,9 +59,12 @@ def define_arguments():
                         help='Window length for long-period spectrogram (in '
                              'seconds)')
     parser.add_argument('--w0', default=10, type=int,
-                        help='Tradeoff between time and frequency resolution in CWT' + 
+                        help='Tradeoff between time and frequency resolution in CWT. Recommended between 1 and 10.' + 
                         'Lower numbers: better time resolution\n' + 
-                        'Higher numbers: better freq resolution')
+                        'Higher numbers: better freq resolution')                 
+    parser.add_argument('--figsize', nargs=2, default=(16, 9), type=float,
+                        help='Size of the produced figure in Inches. Default is 16x9, which is good for high' +
+                             'resolution screen display.')
     parser.add_argument('--winlen_HF', default=4., type=float,
                         help='Window length for high-frequency spectrogram (in '
                              'seconds)')
@@ -67,14 +74,15 @@ def define_arguments():
                         action='store_true',
                         help='Open a matplotlib window instead of saving to '
                              'disk')
-
     parser.add_argument('--unit', default='VEL',
                         help='Unit of input data. Options: ACC, VEL, DIS. Plot is in acceleration.')
-
     parser.add_argument('--kind', default='spec',
                         help='Calculate spectrogram (spec) or continuous '
                              'wavelet transfort (cwt, much slower)? Default: '
                              'spec')
+                             
+    tp_parser.add_argument('--taper', dest='taper', action='store_true')
+    tp_parser.add_argument('--no-taper', dest='taper', action='store_false')
 
     args = parser.parse_args()
 
@@ -86,26 +94,29 @@ def main():
 
     from .spectrogram import calc_specgram_dual
     import obspy
+    from obspy.clients.fdsn import Client
 
     st = obspy.Stream()
     if args.web_service == True:
       print('You chose to load through web service. Please be patient.')
       ws_client = Client(args.client)
-      st += ws_client.get_waveforms(args.network,
-                                    args.station,
-                                    args.location,
-                                    args.channel,
-                                    obspy.UTCDateTime(args.tstart),
-                                    obspy.UTCDateTime(args.tend),
+      st += ws_client.get_waveforms(network=args.network,
+                                    station=args.station,
+                                    location=args.location,
+                                    channel=args.channel,
+                                    starttime=obspy.UTCDateTime(args.tstart),
+                                    endtime=obspy.UTCDateTime(args.tend),
                                     )
-    else:  
+    else:
      for file in args.data_files:
         st += obspy.read(file)
     st.merge(method=1, fill_value='interpolate')
     samp_rate_original = st[0].stats.sampling_rate
     if samp_rate_original > args.fmax * 10 and samp_rate_original % 5 == 0.:
+        print('Decimating')
         st.decimate(5)
     while st[0].stats.sampling_rate > 4. * args.fmax:
+        print('Step decimating...')
         st.decimate(2)
 
     if args.tstart is not None:
@@ -120,13 +131,31 @@ def main():
             tr.stats.latitude = coords['latitude']
             tr.stats.longitude = coords['longitude']
             tr.stats.elevation = coords['elevation']
-        st.remove_response(inventory=inv, output='ACC')
+        st.remove_response(inventory=inv, output='ACC', taper=args.taper)
+        
     else:
-        if args.unit=='VEL':
-            st.differentiate()
-        if args.unit=='DIS':
-            st.differentiate()
-            st.differentiate()
+        if args.ws_inventory==True:
+           inv = ws_client.get_stations(
+             network=tr.stats.network,
+             station=tr.stats.station,
+             location=tr.stats.location,
+             channel=tr.stats.channel,
+             starttime=tr.stats.starttime,
+             endtime=tr.stats.endtime,
+             level='response',
+             )
+           for tr in st:
+              coords = inv.get_coordinates(tr.get_id())
+              tr.stats.latitude = coords['latitude']
+              tr.stats.longitude = coords['longitude']
+              tr.stats.elevation = coords['elevation']
+           st.remove_response(inventory=inv, output='ACC', taper=args.taper)
+        else:
+          if args.unit=='VEL':
+              st.differentiate()
+          if args.unit=='DIS':
+              st.differentiate()
+              st.differentiate()
 
     if args.catalog_file is not None:
         cat = obspy.read_events(args.catalog_file)
@@ -154,6 +183,7 @@ def main():
                        w0=args.w0,
                        ratio_LF_spec=args.plot_ratio,
                        catalog=cat,
+                       figsize=args.figsize,
                        winlen_sec_HF=args.winlen_HF,
                        winlen_sec_LF=args.winlen)
 
